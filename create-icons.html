@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Icons</title>
+</head>
+<body>
+  <h2>Right-click each icon and "Save image as..."</h2>
+  <p>Save as: icon16.png, icon48.png, icon128.png</p>
+  <div style="display: flex; gap: 20px; align-items: end; margin: 20px;">
+    <div>
+      <canvas id="icon16" width="16" height="16"></canvas>
+      <p>16x16</p>
+    </div>
+    <div>
+      <canvas id="icon48" width="48" height="48"></canvas>
+      <p>48x48</p>
+    </div>
+    <div>
+      <canvas id="icon128" width="128" height="128"></canvas>
+      <p>128x128</p>
+    </div>
+  </div>
+  
+  <script>
+    function drawIcon(canvasId, size) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      
+      // Gradient background
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#14B8A6');
+      gradient.addColorStop(1, '#10B981');
+      
+      // Rounded rectangle background
+      const radius = size * 0.2;
+      ctx.beginPath();
+      ctx.roundRect(0, 0, size, size, radius);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      // Draw clipboard icon (white)
+      ctx.fillStyle = 'white';
+      const clipW = size * 0.5;
+      const clipH = size * 0.6;
+      const clipX = (size - clipW) / 2;
+      const clipY = size * 0.25;
+      const clipRadius = size * 0.06;
+      
+      ctx.beginPath();
+      ctx.roundRect(clipX, clipY, clipW, clipH, clipRadius);
+      ctx.fill();
+      
+      // Clipboard top clip
+      const topW = size * 0.25;
+      const topH = size * 0.12;
+      const topX = (size - topW) / 2;
+      const topY = clipY - topH / 2;
+      ctx.beginPath();
+      ctx.roundRect(topX, topY, topW, topH, size * 0.03);
+      ctx.fill();
+      
+      // Lines on clipboard (green to show content)
+      ctx.fillStyle = '#10B981';
+      const lineH = size * 0.04;
+      const lineW = clipW * 0.7;
+      const lineX = clipX + (clipW - lineW) / 2;
+      
+      for (let i = 0; i < 3; i++) {
+        const lineY = clipY + clipH * 0.35 + i * (lineH + size * 0.06);
+        ctx.beginPath();
+        ctx.roundRect(lineX, lineY, lineW, lineH, lineH / 2);
+        ctx.fill();
+      }
+    }
+    
+    drawIcon('icon16', 16);
+    drawIcon('icon48', 48);
+    drawIcon('icon128', 128);
+  </script>
+</body>
+</html>

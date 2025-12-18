@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Grab - Job Details",
+  "version": "1.0",
+  "description": "Click the icon to copy job details (company, role, description) to clipboard",
+  "permissions": ["activeTab", "scripting", "clipboardWrite"],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "default_title": "Click to copy job details"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
