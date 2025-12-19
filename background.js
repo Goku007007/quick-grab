@@ -139,8 +139,82 @@ function extractAndCopyJobDetails() {
     for (const selector of roleSelectors) {
       const el = document.querySelector(selector);
       if (el && el.textContent.trim()) {
-        roleName = el.textContent.trim();
-        break;
+        const text = el.textContent.trim();
+        const textLower = text.toLowerCase();
+        // Filter out LinkedIn UI elements
+        if (text.length >= 2 && text.length < 100 &&
+          !text.includes('·') &&
+          !text.includes('applicant') &&
+          !textLower.includes('job search') &&
+          !textLower.includes('premium') &&
+          !textLower.includes('use ai to assess') &&
+          !textLower.includes('how you fit') &&
+          !textLower.includes('match details') &&
+          !textLower.includes('help me stand out') &&
+          !textLower.includes('people you can reach') &&
+          !textLower.includes('meet the hiring') &&
+          !textLower.includes('compare to') &&
+          !textLower.includes('clicked apply') &&
+          !textLower.includes('reactivate premium') &&
+          !textLower.includes('about the job') &&
+          !textLower.includes('about the company')) {
+          roleName = text;
+          break;
+        }
+      }
+    }
+
+    // NEW FALLBACK: Find role by looking for text element near company link
+    // Some LinkedIn pages use <p> tags with obfuscated classes for job titles
+    if (!roleName && companyName) {
+      // Find the company link element
+      const companyLink = Array.from(document.querySelectorAll('a')).find(el =>
+        el.href && el.href.includes('/company/') &&
+        el.textContent.trim() === companyName
+      );
+
+      if (companyLink) {
+        // Look for siblings or nearby elements that could be the job title
+        // The job title is usually a sibling of the company link's parent
+        let parent = companyLink.parentElement;
+        for (let i = 0; i < 5 && parent; i++) {
+          // Look for text elements within this container
+          const textElements = parent.querySelectorAll('h1, h2, h3, p, span, a');
+          for (const el of textElements) {
+            const text = el.textContent.trim();
+            const textLower = text.toLowerCase();
+            // Job titles are short, don't contain certain patterns, and aren't the company name
+            if (text && text.length >= 3 && text.length < 80 &&
+              text !== companyName &&
+              !text.includes('·') &&
+              !text.includes('applicant') &&
+              !text.includes('ago') &&
+              !textLower.includes('on-site') &&
+              !textLower.includes('remote') &&
+              !textLower.includes('hybrid') &&
+              !textLower.includes('full-time') &&
+              !textLower.includes('part-time') &&
+              !textLower.includes('contract') &&
+              !textLower.includes('apply') &&
+              !textLower.includes('save') &&
+              !textLower.includes('promoted') &&
+              !textLower.includes('responses') &&
+              !textLower.includes('job search') &&
+              !textLower.includes('premium') &&
+              !textLower.includes('use ai') &&
+              !textLower.includes('about the job') &&
+              !textLower.includes('about the company') &&
+              // Check if it's short enough to be a job title and doesn't look like a location
+              !text.match(/^[A-Z][a-z]+,\s+[A-Z]{2}$/) && // e.g., "Austin, TX"
+              !text.match(/^\d+/) // Doesn't start with a number
+            ) {
+              roleName = text;
+              break;
+            }
+          }
+          if (roleName) break;
+          parent = parent.parentElement;
+        }
       }
     }
 
