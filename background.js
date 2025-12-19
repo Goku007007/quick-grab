@@ -31,14 +31,18 @@ function extractAndCopyJobDetails() {
 
     // Company name - try multiple selectors for different LinkedIn layouts (updated for 2024/2025)
     const companySelectors = [
-      // New LinkedIn UI selectors (2024/2025)
+      // Latest LinkedIn UI selectors (December 2024/2025)
       '.job-details-jobs-unified-top-card__company-name a',
       '.job-details-jobs-unified-top-card__company-name',
-      '.job-details-jobs-unified-top-card__primary-description-container a',
-      '.job-details-jobs-unified-top-card__primary-description a',
-      // Job details panel selectors
+      '.artdeco-entity-lockup__subtitle a',
+      '.artdeco-entity-lockup__subtitle span a',
+      // Company name in the top card area - new structure
       '.jobs-unified-top-card__company-name a',
       '.jobs-unified-top-card__company-name',
+      '.t-black a[href*="/company/"]',
+      // Primary description container
+      '.job-details-jobs-unified-top-card__primary-description-container a',
+      '.job-details-jobs-unified-top-card__primary-description a',
       '.jobs-unified-top-card__primary-description a',
       // Legacy/alternative selectors
       '.topcard__org-name-link',
@@ -50,8 +54,8 @@ function extractAndCopyJobDetails() {
       '.artdeco-entity-lockup__subtitle',
       '.company-name-link',
       '.employer-name',
-      // Generic company link fallback
-      'a[href*="/company/"]'
+      // Generic company link fallback - look for company page link near job header
+      'a[href*="/company/"][class*="app-aware"]'
     ];
 
     for (const selector of companySelectors) {
@@ -66,26 +70,70 @@ function extractAndCopyJobDetails() {
       }
     }
 
+    // Fallback: Find company name by looking for company links in the top card area
+    if (!companyName) {
+      // Look for a link that goes to /company/ within the job details area
+      const topCardArea = document.querySelector('.job-details-jobs-unified-top-card__container--two-pane') ||
+        document.querySelector('.jobs-unified-top-card') ||
+        document.querySelector('[class*="top-card"]') ||
+        document.querySelector('main');
+
+      if (topCardArea) {
+        const companyLinks = topCardArea.querySelectorAll('a[href*="/company/"]');
+        for (const link of companyLinks) {
+          const text = link.textContent.trim();
+          // Skip if it's not a reasonable company name
+          if (text && text.length > 2 && text.length < 100 && !text.includes('·')) {
+            companyName = text;
+            break;
+          }
+        }
+      }
+    }
+
+    // Ultimate fallback: Search all elements for text that appears before the location
+    if (!companyName) {
+      // In LinkedIn job pages, company name typically appears right after the job title
+      // Look for pattern: "Company Name" followed by location info
+      const allLinks = Array.from(document.querySelectorAll('a'));
+      const companyLink = allLinks.find(el =>
+        el.href && el.href.includes('/company/') &&
+        el.textContent.trim().length > 2 &&
+        el.textContent.trim().length < 100 &&
+        !el.textContent.includes('·') &&
+        !el.textContent.includes('applicant')
+      );
+      if (companyLink) {
+        companyName = companyLink.textContent.trim();
+      }
+    }
+
     // Role/Job title - try multiple selectors (updated for 2024/2025)
     const roleSelectors = [
-      // New LinkedIn UI selectors
+      // Latest LinkedIn UI selectors (December 2024/2025)
       '.job-details-jobs-unified-top-card__job-title h1',
       '.job-details-jobs-unified-top-card__job-title a',
       '.job-details-jobs-unified-top-card__job-title',
+      '.artdeco-entity-lockup__title h1',
+      '.artdeco-entity-lockup__title a',
+      '.artdeco-entity-lockup__title',
       // Job details panel selectors
       '.jobs-unified-top-card__job-title h1',
       '.jobs-unified-top-card__job-title a',
       '.jobs-unified-top-card__job-title',
+      // H1 with common LinkedIn title classes
+      'h1.t-24.t-bold',
+      'h1.t-24',
+      'h1.t-bold',
       // Legacy/alternative selectors
       '.topcard__title',
       '.top-card-layout__title',
-      'h1.t-24',
-      'h1.t-bold',
       '.job-view-layout .jobs-unified-top-card__job-title',
-      '.artdeco-entity-lockup__title',
       // Generic h1 fallback for job title
       '.jobs-details h1',
-      'h1[class*="job"]'
+      'h1[class*="job"]',
+      // Main content area h1 as last resort
+      'main h1'
     ];
 
     for (const selector of roleSelectors) {
@@ -93,6 +141,68 @@ function extractAndCopyJobDetails() {
       if (el && el.textContent.trim()) {
         roleName = el.textContent.trim();
         break;
+      }
+    }
+
+    // Fallback: Find role by looking for h1/h2 in the top card or main content area
+    if (!roleName) {
+      const topCardArea = document.querySelector('.job-details-jobs-unified-top-card__container--two-pane') ||
+        document.querySelector('.jobs-unified-top-card') ||
+        document.querySelector('[class*="top-card"]') ||
+        document.querySelector('main');
+
+      if (topCardArea) {
+        // Look for h1 or h2 elements that could be job titles
+        const headings = topCardArea.querySelectorAll('h1, h2');
+        for (const heading of headings) {
+          const text = heading.textContent.trim();
+          const textLower = text.toLowerCase();
+          // Job titles are typically 2-100 characters and don't contain certain patterns
+          // Exclude LinkedIn UI elements that appear as headings
+          if (text && text.length >= 2 && text.length < 100 &&
+            !text.includes('·') &&
+            !text.includes('applicant') &&
+            !textLower.includes('job search') &&
+            !textLower.includes('premium') &&
+            !textLower.includes('use ai to assess') &&
+            !textLower.includes('how you fit') &&
+            !textLower.includes('match details') &&
+            !textLower.includes('help me stand out') &&
+            !textLower.includes('people you can reach') &&
+            !textLower.includes('meet the hiring') &&
+            !textLower.includes('compare to') &&
+            !textLower.includes('clicked apply') &&
+            !textLower.includes('reactivate premium')) {
+            roleName = text;
+            break;
+          }
+        }
+      }
+    }
+
+    // Ultimate fallback: Look for the first meaningful h1 on the page
+    if (!roleName) {
+      const allH1s = Array.from(document.querySelectorAll('h1'));
+      for (const h1 of allH1s) {
+        const text = h1.textContent.trim();
+        const textLower = text.toLowerCase();
+        if (text && text.length >= 2 && text.length < 100 &&
+          !text.includes('·') &&
+          !textLower.includes('job search') &&
+          !textLower.includes('premium') &&
+          !textLower.includes('linkedin') &&
+          !textLower.includes('use ai to assess') &&
+          !textLower.includes('how you fit') &&
+          !textLower.includes('match details') &&
+          !textLower.includes('help me stand out') &&
+          !textLower.includes('people you can reach') &&
+          !textLower.includes('meet the hiring') &&
+          !textLower.includes('compare to') &&
+          !textLower.includes('clicked apply') &&
+          !textLower.includes('reactivate premium')) {
+          roleName = text;
+          break;
+        }
       }
     }
 
@@ -127,12 +237,50 @@ function extractAndCopyJobDetails() {
       '.job-view-layout [class*="description"]'
     ];
 
+    // Helper function to convert HTML to formatted text
+    function htmlToFormattedText(element) {
+      // Clone the element to avoid modifying the original
+      const clone = element.cloneNode(true);
+
+      // Replace <br> with newlines
+      clone.querySelectorAll('br').forEach(br => {
+        br.replaceWith('\n');
+      });
+
+      // Add newlines before and after block elements
+      const blockElements = clone.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, li, ul, ol, section, article');
+      blockElements.forEach(el => {
+        // For list items, add a bullet point
+        if (el.tagName === 'LI') {
+          el.prepend('• ');
+        }
+        // Add newline after block elements
+        const textNode = document.createTextNode('\n');
+        if (el.nextSibling) {
+          el.parentNode.insertBefore(textNode, el.nextSibling);
+        } else {
+          el.parentNode.appendChild(textNode);
+        }
+      });
+
+      // Get the text content and clean it up
+      let text = clone.textContent || clone.innerText || '';
+
+      // Clean up excessive whitespace while preserving intentional line breaks
+      text = text
+        .replace(/[ \t]+/g, ' ')          // Replace multiple spaces/tabs with single space
+        .replace(/\n /g, '\n')            // Remove leading space after newlines
+        .replace(/ \n/g, '\n')            // Remove trailing space before newlines
+        .replace(/\n{3,}/g, '\n\n')       // Replace 3+ newlines with double newline
+        .trim();
+
+      return text;
+    }
+
     for (const selector of descSelectors) {
       const el = document.querySelector(selector);
       if (el && el.textContent.trim().length > 100) {
-        jobDescription = el.textContent.trim();
-        // Clean up the description - remove excessive whitespace
-        jobDescription = jobDescription.replace(/\n{3,}/g, '\n\n').trim();
+        jobDescription = htmlToFormattedText(el);
         break;
       }
     }
